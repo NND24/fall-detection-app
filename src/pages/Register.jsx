@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function Register() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [esp32Url, setEsp32Url] = useState("");
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
 
     if (password !== confirmPass) {
@@ -16,26 +18,35 @@ export default function Register() {
       return;
     }
 
-    // Giả sử chỉ lưu 1 user cho đơn giản
-    const userData = {
-      email,
-      password,
-      esp32Url,
-    };
+    try {
+      const response = await axios.post("http://localhost:8000/api/public/v1/register", {
+        full_name: fullName,
+        email,
+        password,
+        esp32_url: esp32Url,
+      });
 
-    localStorage.setItem("user", JSON.stringify(userData));
-
-    alert("Đăng ký thành công! Mời bạn đăng nhập.");
-    navigate("/login");
+      alert("Đăng ký thành công! Mời bạn đăng nhập.");
+      navigate("/login");
+    } catch (error) {
+      console.error(error);
+      alert("Đăng ký thất bại. Vui lòng kiểm tra lại thông tin!");
+    }
   };
 
   return (
     <div className='auth-container'>
       <h2>Đăng ký</h2>
       <form onSubmit={handleRegister}>
+        <input
+          type='text'
+          placeholder='Họ và tên'
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
         <input type='email' placeholder='Email' required value={email} onChange={(e) => setEmail(e.target.value)} />
         <input
-          name='url'
           type='text'
           placeholder='Nhập url của ESP32-CAM'
           required

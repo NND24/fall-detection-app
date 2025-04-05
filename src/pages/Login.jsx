@@ -6,25 +6,35 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    // 👉 Giả sử đăng nhập luôn thành công (bạn có thể thêm logic thực tế sau)
-    if (email && password) {
-      // Có thể lưu vào localStorage nếu muốn
-      localStorage.setItem("user", JSON.stringify({ email }));
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/public/v1/authenticate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-      // 👉 Điều hướng sang trang chủ
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Đăng nhập thất bại");
+      }
+
+      const data = await response.json();
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      alert("Đăng nhập thành công!");
       navigate("/");
-    } else {
-      alert("Vui lòng nhập đầy đủ email và mật khẩu.");
+    } catch (err) {
+      alert(`Lỗi: ${err.message}`);
     }
   };
 
   return (
     <div className='auth-container'>
       <h2>Đăng nhập</h2>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleLogin}>
         <input type='email' placeholder='Email' required value={email} onChange={(e) => setEmail(e.target.value)} />
         <input
           type='password'

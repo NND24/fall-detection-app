@@ -1,11 +1,31 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
 
 const Home = () => {
+  const navigate = useNavigate();
+
   const [prediction, setPrediction] = useState("Unknown");
   const [isRecording, setIsRecording] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newUrl, setNewUrl] = useState("");
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      navigate("/login");
+    } else {
+      setUser(JSON.parse(userData));
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    console.log(user);
+    if (user) {
+      setNewUrl(user.esp32_url || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     let interval;
@@ -35,12 +55,9 @@ const Home = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem("user");
     alert("Đăng xuất thành công!");
-    // Thực hiện thêm hành động nếu cần
-  };
-
-  const handleUrlChange = () => {
-    setShowUrlInput(true);
+    navigate("/login");
   };
 
   const saveNewUrl = () => {
@@ -125,9 +142,9 @@ const Home = () => {
       }
     }
 
-    const interval = setInterval(fetchSensorData, 100); // Lấy dữ liệu mỗi 100ms
+    // const interval = setInterval(fetchSensorData, 100); // Lấy dữ liệu mỗi 100ms
 
-    return () => clearInterval(interval); // Cleanup khi component unmounts
+    // return () => clearInterval(interval); // Cleanup khi component unmounts
   }, []);
 
   return (
@@ -136,7 +153,8 @@ const Home = () => {
       <div className='header'>
         <h1>Fall Detection Admin</h1>
         <div className='header-actions'>
-          <button className='change-url' onClick={handleUrlChange}>
+          {user && <span>{user.full_name}</span>}
+          <button className='change-url' onClick={() => setShowUrlInput(!showUrlInput)}>
             Đổi URL
           </button>
           <button className='logout' onClick={handleLogout}>
@@ -150,6 +168,7 @@ const Home = () => {
         <div className='url-input-box'>
           <input type='text' value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder='Nhập URL mới' />
           <button onClick={saveNewUrl}>Lưu URL</button>
+          <button onClick={() => setShowUrlInput(!showUrlInput)}>Đóng</button>
         </div>
       )}
 
