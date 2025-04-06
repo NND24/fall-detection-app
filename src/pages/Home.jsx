@@ -16,7 +16,7 @@ const Home = () => {
     if (!userData) {
       navigate("/login");
     } else {
-      setUser(JSON.parse(userData));
+      // setUser(JSON.parse(userData));
     }
   }, [navigate]);
 
@@ -29,24 +29,43 @@ const Home = () => {
 
   useEffect(() => {
     let interval;
+
     if (isRecording) {
       interval = setInterval(() => {
-        fetch(`http://127.0.0.1:8000/api/public/v1/prediction`)
-          .then((response) => response.json())
-          .then((data) => setPrediction(data.label))
-          .catch((error) => console.error("Error fetching prediction:", error));
+        fetch("http://127.0.0.1:8000/api/public/v1/prediction", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            setPrediction(data.label);
+          })
+          .catch((error) => {
+            console.error("Error fetching prediction:", error);
+            setPrediction("Error fetching prediction");
+          });
       }, 1000);
     }
-    return () => interval && clearInterval(interval);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isRecording]);
 
   const toggleRecording = async () => {
-    const url = isRecording ? `http://127.0.0.1:8000/api/public/v1/stop` : `http://127.0.0.1:8000/api/public/v1/start`;
+    //const url = isRecording ? `http://127.0.0.1:8000/api/public/v1/stop` : `http://127.0.0.1:8000/api/public/v1/start`;
     try {
-      const response = await fetch(url, { method: "POST" });
-      if (!response.ok) throw new Error("Failed to toggle recording");
-      const data = await response.json();
-      console.log(data.message);
+      // const response = await fetch(url, { method: "POST" });
+      // if (!response.ok) throw new Error("Failed to toggle recording");
+      // const data = await response.json();
+      // console.log(data.message);
       setIsRecording((prev) => !prev);
     } catch (error) {
       console.error("Recording toggle error:", error);
@@ -181,9 +200,10 @@ const Home = () => {
           {isRecording && (
             <>
               <h2>Live Stream</h2>
-              <img src={`http://127.0.0.1:8000/api/public/v1/video_feed`} alt='Live Stream' />
+              <img src={`http://127.0.0.1:8000/api/private/user/v1/video_feed`} alt='Live Stream' />
             </>
           )}
+
           <button className={`record-btn ${isRecording ? "stop" : "start"}`} onClick={toggleRecording}>
             {isRecording ? "Stop Recording" : "Start Recording"}
           </button>
@@ -218,7 +238,7 @@ const Home = () => {
               </div>
             </div>
             <div className='data-item'>
-              Gesture: <span>{prediction}</span>
+              Gesture: <span>{sensorData.gesture}</span>
             </div>
           </div>
         </div>
@@ -226,7 +246,7 @@ const Home = () => {
           <h3>Camera Info</h3>
 
           <div className='data-item'>
-            Gesture: <span>{sensorData.gesture}</span>
+            Gesture: <span>{prediction}</span>
           </div>
         </div>
       </div>
