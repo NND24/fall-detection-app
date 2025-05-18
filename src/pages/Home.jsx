@@ -233,7 +233,7 @@ const Home = () => {
 
       {/* NỘI DUNG CHÍNH */}
       <div className='main-content'>
-        <div className='left-panel'>{/* <canvas className='model-3d-frame' id='3d-model'></canvas> */}</div>
+        {/* <div className='left-panel'><canvas className='model-3d-frame' id='3d-model'></canvas> </div>*/}
         <div className='right-panel'>
           {isRecording && (
             <>
