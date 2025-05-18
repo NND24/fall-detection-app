@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
+import axios from "axios";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -12,12 +13,27 @@ const Home = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (!userData) {
-      navigate("/login");
-    } else {
-      // setUser(JSON.parse(userData));
-    }
+    fetch("http://127.0.0.1:8000/api/private/user/v1/find-user", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json(); // chỉ gọi 1 lần ở đây
+      })
+      .then((data) => {
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          navigate("/login");
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching user data:", error);
+        navigate("/login");
+      });
   }, [navigate]);
 
   useEffect(() => {
@@ -74,13 +90,37 @@ const Home = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
     alert("Đăng xuất thành công!");
     navigate("/login");
   };
 
-  const saveNewUrl = () => {
-    setShowUrlInput(false);
+  const saveNewUrl = async () => {
+    if (user && newUrl !== "") {
+      fetch("http://127.0.0.1:8000/api/private/user/v1/change_esp32_url", {
+        method: "PUT",
+        credentials: "include", // Đảm bảo gửi cookie
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name: user.full_name,
+          account_id: user.account_id,
+          esp32_url: newUrl,
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {})
+        .catch((error) => {
+          console.error("Error:", error);
+        });
+
+      setShowUrlInput(false);
+    }
   };
 
   const [sensorData, setSensorData] = useState({
@@ -93,78 +133,78 @@ const Home = () => {
     gesture: "Loading...",
   });
 
-  useEffect(() => {
-    // Tạo khung 3D
-    const canvas = document.getElementById("3d-model");
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
-    const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ canvas });
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  // useEffect(() => {
+  //   // Tạo khung 3D
+  //   const canvas = document.getElementById("3d-model");
+  //   const scene = new THREE.Scene();
+  //   scene.background = new THREE.Color(0xffffff);
+  //   const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+  //   const renderer = new THREE.WebGLRenderer({ canvas });
+  //   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
-    // Tạo một hình hộp đại diện cho cảm biến
-    const geometry = new THREE.BoxGeometry(2, 1, 4);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x0077ff,
-      wireframe: false,
-    });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+  //   // Tạo một hình hộp đại diện cho cảm biến
+  //   const geometry = new THREE.BoxGeometry(2, 1, 4);
+  //   const material = new THREE.MeshBasicMaterial({
+  //     color: 0x0077ff,
+  //     wireframe: false,
+  //   });
+  //   const cube = new THREE.Mesh(geometry, material);
+  //   scene.add(cube);
 
-    // Thêm ánh sáng
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5, 5, 5).normalize();
-    scene.add(light);
+  //   // Thêm ánh sáng
+  //   const light = new THREE.DirectionalLight(0xffffff, 1);
+  //   light.position.set(5, 5, 5).normalize();
+  //   scene.add(light);
 
-    camera.position.z = 5;
+  //   camera.position.z = 5;
 
-    // Hàm xoay dựa trên dữ liệu cảm biến
-    function updateModel(gyroX, gyroY, gyroZ) {
-      cube.rotation.x = THREE.MathUtils.degToRad(gyroX * 10);
-      cube.rotation.y = THREE.MathUtils.degToRad(gyroY * 10);
-      cube.rotation.z = THREE.MathUtils.degToRad(gyroZ * 10);
-    }
+  //   // Hàm xoay dựa trên dữ liệu cảm biến
+  //   function updateModel(gyroX, gyroY, gyroZ) {
+  //     cube.rotation.x = THREE.MathUtils.degToRad(gyroX * 10);
+  //     cube.rotation.y = THREE.MathUtils.degToRad(gyroY * 10);
+  //     cube.rotation.z = THREE.MathUtils.degToRad(gyroZ * 10);
+  //   }
 
-    // Hàm vẽ lại khung hình
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    }
+  //   // Hàm vẽ lại khung hình
+  //   function animate() {
+  //     requestAnimationFrame(animate);
+  //     renderer.render(scene, camera);
+  //   }
 
-    animate();
+  //   animate();
 
-    // Kết nối dữ liệu cảm biến từ API
-    async function fetchSensorData() {
-      try {
-        const response = await fetch("http://192.168.43.113/");
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+  //   // Kết nối dữ liệu cảm biến từ API
+  //   async function fetchSensorData() {
+  //     try {
+  //       const response = await fetch("http://192.168.43.113/");
+  //       if (!response.ok) {
+  //         throw new Error(`HTTP error! Status: ${response.status}`);
+  //       }
 
-        const data = await response.json();
+  //       const data = await response.json();
 
-        // Cập nhật state với dữ liệu cảm biến
-        setSensorData({
-          accelerationX: `${data.acceleration_x.toFixed(2)} m/s²`,
-          accelerationY: `${data.acceleration_y.toFixed(2)} m/s²`,
-          accelerationZ: `${data.acceleration_z.toFixed(2)} m/s²`,
-          gyroX: `${data.gyro_x.toFixed(2)} rad/s`,
-          gyroY: `${data.gyro_y.toFixed(2)} rad/s`,
-          gyroZ: `${data.gyro_z.toFixed(2)} rad/s`,
-          gesture: data.prediction,
-        });
+  //       // Cập nhật state với dữ liệu cảm biến
+  //       setSensorData({
+  //         accelerationX: `${data.acceleration_x.toFixed(2)} m/s²`,
+  //         accelerationY: `${data.acceleration_y.toFixed(2)} m/s²`,
+  //         accelerationZ: `${data.acceleration_z.toFixed(2)} m/s²`,
+  //         gyroX: `${data.gyro_x.toFixed(2)} rad/s`,
+  //         gyroY: `${data.gyro_y.toFixed(2)} rad/s`,
+  //         gyroZ: `${data.gyro_z.toFixed(2)} rad/s`,
+  //         gesture: data.prediction,
+  //       });
 
-        // Gọi hàm updateModel với dữ liệu cảm biến
-        updateModel(data.gyro_x, data.gyro_y, data.gyro_z);
-      } catch (error) {
-        console.error("Error fetching sensor data:", error);
-      }
-    }
+  //       // Gọi hàm updateModel với dữ liệu cảm biến
+  //       updateModel(data.gyro_x, data.gyro_y, data.gyro_z);
+  //     } catch (error) {
+  //       console.error("Error fetching sensor data:", error);
+  //     }
+  //   }
 
-    // const interval = setInterval(fetchSensorData, 100); // Lấy dữ liệu mỗi 100ms
+  //   // const interval = setInterval(fetchSensorData, 100); // Lấy dữ liệu mỗi 100ms
 
-    // return () => clearInterval(interval); // Cleanup khi component unmounts
-  }, []);
+  //   // return () => clearInterval(interval); // Cleanup khi component unmounts
+  // }, []);
 
   return (
     <div className='video-stream'>
@@ -193,9 +233,7 @@ const Home = () => {
 
       {/* NỘI DUNG CHÍNH */}
       <div className='main-content'>
-        <div className='left-panel'>
-          <canvas className='model-3d-frame' id='3d-model'></canvas>
-        </div>
+        <div className='left-panel'>{/* <canvas className='model-3d-frame' id='3d-model'></canvas> */}</div>
         <div className='right-panel'>
           {isRecording && (
             <>
@@ -215,7 +253,7 @@ const Home = () => {
         <div className='info-box'>
           <h3>Sensor Info</h3>
           <div className='data-container'>
-            <div className='group'>
+            {/* <div className='group'>
               <div className='data-item'>
                 Acceleration X: <span>{sensorData.accelerationX}</span>
               </div>
@@ -236,7 +274,7 @@ const Home = () => {
               <div className='data-item'>
                 Gyro Z: <span>{sensorData.gyroZ}</span>
               </div>
-            </div>
+            </div>*/}
             <div className='data-item'>
               Gesture: <span>{sensorData.gesture}</span>
             </div>

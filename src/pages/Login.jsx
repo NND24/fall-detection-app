@@ -20,13 +20,10 @@ export default function Login() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Đăng nhập thất bại");
+      } else {
+        alert("Đăng nhập thành công!");
+        navigate("/");
       }
-
-      const data = await response.json();
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      alert("Đăng nhập thành công!");
-      navigate("/");
     } catch (err) {
       alert(`Lỗi: ${err.message}`);
     }
