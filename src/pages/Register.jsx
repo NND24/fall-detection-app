@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function Register() {
+  const host = "http://127.0.0.1:8000";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,7 +20,7 @@ export default function Register() {
     }
 
     try {
-      const response = await axios.post("http://localhost:8000/api/public/v1/register", {
+      const response = await axios.post(host + "/api/public/v1/register", {
         full_name: fullName,
         email,
         password,

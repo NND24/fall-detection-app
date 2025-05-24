@@ -2,17 +2,20 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const host = "http://127.0.0.1:8000";
+  const [email, setEmail] = useState("ngocdatnguyen2404@gmail.com");
+  const [password, setPassword] = useState("123456789");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/public/v1/authenticate", {
+      const response = await fetch(host + "/api/public/v1/authenticate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
         body: JSON.stringify({ email, password }),
       });
