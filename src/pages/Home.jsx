@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import * as THREE from "three";
-import axios from "axios";
 
 const Home = () => {
-  const host = "http://127.0.0.1:8000";
+  //http://127.0.0.1:8000
+  const host = " https://35de-2a09-bac5-d46d-16dc-00-247-fe.ngrok-free.app";
   const navigate = useNavigate();
 
   const [prediction, setPrediction] = useState("Unknown");
@@ -56,42 +55,45 @@ const Home = () => {
   }, [user]);
 
   useEffect(() => {
-    let interval;
-    let timeout;
+    let isActive = true;
+
+    const pollPrediction = async () => {
+      if (!isActive) return;
+
+      try {
+        const response = await fetch(host + "/api/public/v1/prediction", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": userId,
+            "ngrok-skip-browser-warning": true,
+          },
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setPrediction(data.label);
+      } catch (error) {
+        console.error("Error fetching prediction:", error);
+        setPrediction("Error fetching prediction");
+      }
+
+      if (isActive) {
+        // Chờ 2s mới fetch tiếp để tránh overload
+        setTimeout(pollPrediction, 2000);
+      }
+    };
 
     if (isRecording) {
-      // Chờ 30 giây rồi mới bắt đầu fetch mỗi 1 giây
-      timeout = setTimeout(() => {
-        interval = setInterval(() => {
-          fetch(host + "/api/public/v1/prediction", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "X-User-Id": userId,
-              "ngrok-skip-browser-warning": true,
-            },
-            credentials: "include",
-          })
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              return response.json();
-            })
-            .then((data) => {
-              setPrediction(data.label);
-            })
-            .catch((error) => {
-              console.error("Error fetching prediction:", error);
-              setPrediction("Error fetching prediction");
-            });
-        }, 1000);
-      }, 100);
+      pollPrediction();
     }
 
     return () => {
-      if (timeout) clearTimeout(timeout);
-      if (interval) clearInterval(interval);
+      isActive = false; // Dừng polling khi component unmount hoặc isRecording = false
     };
   }, [isRecording, userId]);
 
@@ -151,6 +153,54 @@ const Home = () => {
     }
   };
 
+  const [frameSrc, setFrameSrc] = useState(null);
+  const prevObjectUrlRef = React.useRef(null);
+
+  useEffect(() => {
+    let intervalId;
+
+    if (isRecording) {
+      intervalId = setInterval(async () => {
+        const timestamp = new Date().getTime();
+        const url = `${host}/api/public/v1/frame?t=${timestamp}`;
+
+        try {
+          const response = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "ngrok-skip-browser-warning": "true",
+            },
+            credentials: "include",
+          });
+
+          if (!response.ok) throw new Error("Failed to fetch frame");
+
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+
+          // Giải phóng objectURL cũ trước khi set cái mới
+          if (prevObjectUrlRef.current) {
+            URL.revokeObjectURL(prevObjectUrlRef.current);
+          }
+          prevObjectUrlRef.current = objectUrl;
+
+          setFrameSrc(objectUrl);
+        } catch (error) {
+          console.error("Error fetching frame:", error);
+        }
+      }, 300); // thử tăng lên 300ms hoặc 400ms nếu cần ổn định hơn
+    }
+
+    return () => {
+      clearInterval(intervalId);
+      // Giải phóng URL khi component unmount hoặc isRecording tắt
+      if (prevObjectUrlRef.current) {
+        URL.revokeObjectURL(prevObjectUrlRef.current);
+      }
+    };
+  }, [isRecording]);
+
   return (
     <div className='video-stream'>
       {/* HEADER */}
@@ -183,7 +233,7 @@ const Home = () => {
           {isRecording && (
             <>
               <h2>Live Stream</h2>
-              <img src={`${host}/api/private/user/v1/video_feed`} alt='Live Stream' />
+              <img src={frameSrc} alt='Live Stream' />
             </>
           )}
 

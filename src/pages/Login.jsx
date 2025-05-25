@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const host = "http://127.0.0.1:8000";
+  const host = " https://35de-2a09-bac5-d46d-16dc-00-247-fe.ngrok-free.app";
   const [email, setEmail] = useState("ngocdatnguyen2404@gmail.com");
   const [password, setPassword] = useState("123456789");
   const navigate = useNavigate();

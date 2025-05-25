@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function Register() {
-  const host = "http://127.0.0.1:8000";
+  const host = "https://c294-2a09-bac1-7a80-10-00-3cf-56.ngrok-free.app";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
