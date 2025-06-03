@@ -278,7 +278,7 @@ const Home = () => {
             </div>
 
             {mergedResult &&
-              mergedResult?.map((item, index) => (
+              mergedResult?.slice(0, 5)?.map((item, index) => (
                 <div className='result-row' key={index}>
                   <div className='result-cell'>{item.mpu6050_res}</div>
                   <div className='result-cell'>{item.camera_res}</div>
