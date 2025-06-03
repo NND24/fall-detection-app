@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const host = " https://35de-2a09-bac5-d46d-16dc-00-247-fe.ngrok-free.app";
-  const [email, setEmail] = useState("ngocdatnguyen2404@gmail.com");
-  const [password, setPassword] = useState("123456789");
+  const host = "https://2cc8-123-21-232-106.ngrok-free.app";
+  const [email, setEmail] = useState("levandung.it03@gmail.com");
+  const [password, setPassword] = useState("123123");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -15,6 +15,7 @@ export default function Login() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": true,
         },
         credentials: "include",
         body: JSON.stringify({ email, password }),

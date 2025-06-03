@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 
 const Home = () => {
   //http://127.0.0.1:8000
-  const host = " https://35de-2a09-bac5-d46d-16dc-00-247-fe.ngrok-free.app";
+  const host = "https://2cc8-123-21-232-106.ngrok-free.app";
   const navigate = useNavigate();
 
   const [prediction, setPrediction] = useState("Unknown");
+  const [mergedResult, setMergedResult] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newUrl, setNewUrl] = useState("");
@@ -45,10 +46,9 @@ const Home = () => {
         console.error("Error fetching user data:", error);
         navigate("/login");
       });
-  }, [navigate]);
+  }, [navigate, userId]);
 
   useEffect(() => {
-    console.log(user);
     if (user) {
       setNewUrl(user.esp32_url || "");
     }
@@ -96,6 +96,48 @@ const Home = () => {
       isActive = false; // Dừng polling khi component unmount hoặc isRecording = false
     };
   }, [isRecording, userId]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const pollPrediction = async () => {
+      if (!isActive) return;
+
+      try {
+        const response = await fetch(host + "/api/private/user/v1/latest-merged-result", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": userId,
+            "ngrok-skip-browser-warning": true,
+          },
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data);
+        setMergedResult(data);
+      } catch (error) {
+        console.error("Error fetching prediction:", error);
+        setMergedResult("Error fetching prediction");
+      }
+
+      if (isActive) {
+        // Chờ 2s mới fetch tiếp để tránh overload
+        setTimeout(pollPrediction, 2000);
+      }
+    };
+
+    pollPrediction();
+
+    return () => {
+      isActive = false; // Dừng polling khi component unmount hoặc isRecording = false
+    };
+  }, [userId]);
 
   const toggleRecording = async () => {
     setIsRecording((prev) => !prev);
@@ -154,17 +196,20 @@ const Home = () => {
   };
 
   const [frameSrc, setFrameSrc] = useState(null);
-  const prevObjectUrlRef = React.useRef(null);
+  const isFetchingRef = React.useRef(false);
 
   useEffect(() => {
     let intervalId;
 
     if (isRecording) {
       intervalId = setInterval(async () => {
-        const timestamp = new Date().getTime();
-        const url = `${host}/api/public/v1/frame?t=${timestamp}`;
+        if (isFetchingRef.current) return; // Nếu đang fetch thì bỏ qua
+        isFetchingRef.current = true;
 
         try {
+          const timestamp = new Date().getTime();
+          const url = `${host}/api/public/v1/frame?t=${timestamp}`;
+
           const response = await fetch(url, {
             method: "GET",
             headers: {
@@ -177,27 +222,21 @@ const Home = () => {
           if (!response.ok) throw new Error("Failed to fetch frame");
 
           const blob = await response.blob();
-          const objectUrl = URL.createObjectURL(blob);
-
-          // Giải phóng objectURL cũ trước khi set cái mới
-          if (prevObjectUrlRef.current) {
-            URL.revokeObjectURL(prevObjectUrlRef.current);
-          }
-          prevObjectUrlRef.current = objectUrl;
-
-          setFrameSrc(objectUrl);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setFrameSrc(reader.result);
+            isFetchingRef.current = false;
+          };
+          reader.readAsDataURL(blob);
         } catch (error) {
           console.error("Error fetching frame:", error);
+          isFetchingRef.current = false;
         }
-      }, 300); // thử tăng lên 300ms hoặc 400ms nếu cần ổn định hơn
+      }, 300); // thử 300ms
     }
 
     return () => {
       clearInterval(intervalId);
-      // Giải phóng URL khi component unmount hoặc isRecording tắt
-      if (prevObjectUrlRef.current) {
-        URL.revokeObjectURL(prevObjectUrlRef.current);
-      }
     };
   }, [isRecording]);
 
@@ -228,7 +267,29 @@ const Home = () => {
 
       {/* NỘI DUNG CHÍNH */}
       <div className='main-content'>
-        {/* <div className='left-panel'><canvas className='model-3d-frame' id='3d-model'></canvas> </div>*/}
+        <div className='left-panel'>
+          <h2>Kết quả</h2>
+
+          <div className='result-table'>
+            <div className='result-header'>
+              <div className='result-cell'>Cảm biến</div>
+              <div className='result-cell'>Camera</div>
+              <div className='result-cell'>Thời gian</div>
+            </div>
+
+            {mergedResult &&
+              mergedResult?.map((item, index) => (
+                <div className='result-row' key={index}>
+                  <div className='result-cell'>{item.mpu6050_res}</div>
+                  <div className='result-cell'>{item.camera_res}</div>
+                  <div className='result-cell'>
+                    {new Date(item.created_time.replace(" ", "T")).toLocaleString("vi-VN")}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
         <div className='right-panel'>
           {isRecording && (
             <>
@@ -236,7 +297,6 @@ const Home = () => {
               <img src={frameSrc} alt='Live Stream' />
             </>
           )}
-
           <button className={`record-btn ${isRecording ? "stop" : "start"}`} onClick={toggleRecording}>
             {isRecording ? "Stop Recording" : "Start Recording"}
           </button>
@@ -246,14 +306,7 @@ const Home = () => {
       {/* DƯỚI CÙNG */}
       <div className='bottom-section'>
         <div className='info-box'>
-          <h3>Sensor Info</h3>
-          <div className='data-container'>
-            <div className='data-item'></div>
-          </div>
-        </div>
-        <div className='info-box'>
           <h3>Camera Info</h3>
-
           <div className='data-item'>
             Gesture: <span>{prediction}</span>
           </div>
